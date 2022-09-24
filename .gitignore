@@ -1,3 +1,5 @@
 pipex
+tests/*/
 *.txt
+*.log
 *.o

@@ -5,7 +5,7 @@ FILES = \
 
 OFILES = $(FILES:%=%.o)
 CFLAGS = -Wall -Wextra -Werror
-OPTIM = -O3
+OPTIM = -ggdb3
 export OPTIM
 INC = -I.
 LIBS= -lft
