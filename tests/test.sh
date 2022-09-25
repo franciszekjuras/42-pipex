@@ -2,11 +2,13 @@
 cd "$(dirname "$(realpath "$0")")";
 
 BOLD="\e[1m"
-GREEN="\e[32m"
 RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+CYAN="\e[36m"
 END="\e[m"
 ERROR_STR="${RED}ERROR${END}"
-START_STAT="${GREEN}${BOLD}[START ]${END}"
+START_STAT="${CYAN}${BOLD}[START ]${END}"
 OK_STAT="${GREEN}${BOLD}[    OK]${END}"
 FAIL_STAT="${RED}${BOLD}[  FAIL]${END}"
 VALGRIND_LOG="valgrind.log"
@@ -59,20 +61,22 @@ function count_error
 
 function exec_pipex
 {
-	PATH="$pathvar" $VALGRIND_EXE $pipex_exe "in/$file1" "$cmd1" "out/$file2" 2>"out/$errfile" >"out/$outfile"
+	PATH="$pathvar" $VALGRIND_EXE $pipex_exe "in/$file1" "$cmd1" "$cmd2" "out/$file2" 2>"out/$errfile" >"out/$outfile"
 	out_retval=$?
-	if [[ ! -z "$VALGRIND_EXE" ]] && cat $VALGRIND_LOG | grep -q ERROR
+	sed -i "s;^$pipex_exe;progname;" out/$errfile
+	if [[ ! -z "$VALGRIND_EXE" ]] && cat out/$VALGRIND_LOG | grep -q "ERROR SUMMARY: [1-9]"
 	then 
 	printf "${ERROR_STR}: Leaks detected\n"
-	cat $VALGRIND_LOG
+	cat out/$VALGRIND_LOG
 	count_error
 	fi
 }
 
 function exec_bash
 {
-	PATH="$pathvar" <"in/$file1" $cmd1 >"ref/$file2" 2>"ref/$errfile"
+	( PATH="$pathvar" <"in/$file1" $cmd1 | $cmd2 >"ref/$file2" ) 2>"ref/$errfile"
 	ref_retval=$?
+	sed -i "s;^$0: line [0-9]*;progname;" ref/$errfile
 }
 
 function exec_pipex_and_bash
@@ -107,6 +111,13 @@ function expect_retval_match {
 	fi
 }
 
+function expect_pipex_eq_bash_behavior_with_empty_err {
+	expect_stderr_empty
+	expect_file_match "$file2"
+	expect_stdout_empty
+	expect_retval_match
+}
+
 function expect_pipex_eq_bash_behavior {
 	expect_file_match_unordered "$errfile"
 	expect_file_match "$file2"
@@ -118,6 +129,14 @@ function expect_stdout_empty {
 	if [ -s out/$outfile ]
 	then
 		printf "${ERROR_STR}: stdout not empty\n"
+		count_error
+	fi
+}
+
+function expect_stderr_empty {
+	if [ -s out/$errfile ]
+	then
+		printf "${ERROR_STR}: stderr not empty\n"
 		count_error
 	fi
 }
@@ -171,6 +190,7 @@ function TEST_returning_ok {
 
 	file1="empty.txt"
 	cmd1="/bin/ls"
+	cmd2="/bin/ls"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
@@ -184,6 +204,7 @@ function TEST_with_arg {
 
 	file1="empty.txt"
 	cmd1="/bin/ls -l"
+	cmd2="/bin/ls -l"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
@@ -198,6 +219,7 @@ function TEST_returning_error {
 
 	file1="animals.txt"
 	cmd1="/bin/grep banana"
+	cmd2="/bin/grep banana"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
@@ -211,6 +233,7 @@ function TEST_printing_to_stderr {
 
 	file1="animals.txt"
 	cmd1="/bin/grep"
+	cmd2="/bin/grep"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
@@ -224,10 +247,51 @@ function TEST_segfault {
 
 	file1="animals.txt"
 	cmd1="./bin/segfaulter.sh"
+	cmd2="./bin/segfaulter.sh"
 	file2=$DEFAULT_OUT
-	block_stderr
 	exec_pipex_and_bash
-	unblock_stderr
+	expect_pipex_eq_bash_behavior_with_empty_err
+
+	print_summary
+}
+
+register TEST_full_flow
+function TEST_full_flow {
+	test_setup
+
+	file1="animals.txt"
+	cmd1="/usr/bin/sort"
+	cmd2="/bin/grep dog"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_no_input_file
+function TEST_no_input_file {
+	test_setup
+
+	file1="joker.txt"
+	cmd1="./bin/quitter.sh a"
+	cmd2="./bin/quitter.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_input_file_no_perm
+function TEST_input_file_no_perm {
+	test_setup
+
+	file1="forbidden.txt"
+	cmd1="./bin/quitter.sh a"
+	cmd2="./bin/quitter.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
 
 	print_summary
@@ -238,7 +302,7 @@ function TEST_segfault {
 while getopts "vt:lh" opt; do
 	case $opt in
 	v)
-		VALGRIND_EXE="/usr/bin/valgrind -s --tool=memcheck --leak-check=full --log-file=out/$VALGRIND_LOG --trace-children=yes"
+		VALGRIND_EXE="/usr/bin/valgrind -s --tool=memcheck --leak-check=full --log-file=out/$VALGRIND_LOG --trace-children=no"
 		;;
 	t)
 		test_to_run=$OPTARG
@@ -249,10 +313,10 @@ while getopts "vt:lh" opt; do
 		;;
 	h)
 		echo "Valid options:"
-		echo "-v (use valgrind)"
-		echo "-t <TEST_name> (execute single test)"
-		echo "-l (list tests)"
-		echo "-h (display help)"
+		echo "-v : use valgrind"
+		echo "-t <TEST_name> : execute single test (fuzzy name match)"
+		echo "-l : list tests"
+		echo "-h : display this help"
 		exit
 		;;
 	\?)
