@@ -77,6 +77,7 @@ function exec_bash
 	( PATH="$pathvar" <"in/$file1" $cmd1 | $cmd2 >"ref/$file2" ) 2>"ref/$errfile"
 	ref_retval=$?
 	sed -i "s;^$0: line [0-9]*;progname;" ref/$errfile
+	sed -i "s:ref/:out/:g" ref/$errfile
 }
 
 function exec_pipex_and_bash
@@ -86,7 +87,14 @@ function exec_pipex_and_bash
 }
 
 function expect_file_match {
-	if ! cmp -s "out/$1" "ref/$1"
+	if [[ ! -f "ref/$1" ]]
+	then
+		if [[ -f "out/$1" ]]	
+		then
+			count_error
+			printf "${ERROR_STR}: $1 should not exist\n"
+		fi
+	elif ! cmp -s "out/$1" "ref/$1"
 	then
 		count_error
 		printf "${ERROR_STR}: $1 does not match reference:\n"
@@ -141,14 +149,12 @@ function expect_stderr_empty {
 	fi
 }
 
-function block_stderr
+function with_unwriteable_output_file
 {
-	exec 3>&2 2>/dev/null
-}
-
-function unblock_stderr
-{
-	exec 2>&3
+	echo "whatever" >"out/$1"
+	chmod -w "out/$1"
+	echo "whatever" >"ref/$1"
+	chmod -w "ref/$1"
 }
 
 function print_summary {
@@ -181,7 +187,7 @@ test_names=()
 
 function register
 {
-	test_names[${#test_names[@]}]=$1
+	test_names+=("$1")
 }
 
 register TEST_returning_ok
@@ -274,8 +280,8 @@ function TEST_no_input_file {
 	test_setup
 
 	file1="joker.txt"
-	cmd1="./bin/quitter.sh a"
-	cmd2="./bin/quitter.sh b"
+	cmd1="./bin/tux.sh a"
+	cmd2="./bin/tux.sh b"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
@@ -288,8 +294,65 @@ function TEST_input_file_no_perm {
 	test_setup
 
 	file1="forbidden.txt"
-	cmd1="./bin/quitter.sh a"
-	cmd2="./bin/quitter.sh b"
+	cmd1="./bin/tux.sh a"
+	cmd2="./bin/tux.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_no_output_file
+function TEST_no_output_file {
+	test_setup
+
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="./bin/tux.sh b"
+	file2="./joker/joker.txt"
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_output_file_no_perm
+function TEST_output_file_no_perm {
+	test_setup
+
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="./bin/tux.sh b"
+	file2="unwriteable.txt"
+	with_unwriteable_output_file $file2
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_no_input_or_output
+function TEST_no_input_or_output {
+	test_setup
+
+	file1="joker.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="./bin/tux.sh b"
+	file2="no/such/file.txt"
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_invalid_cmd1
+function TEST_invalid_cmd1 {
+	test_setup
+
+	file1="empty.txt"
+	cmd1="./no/such/prog"
+	cmd2="./bin/tux.sh b"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior
