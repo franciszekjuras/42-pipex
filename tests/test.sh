@@ -74,7 +74,7 @@ function exec_pipex
 
 function exec_bash
 {
-	( PATH="$pathvar" <"in/$file1" $cmd1 | $cmd2 >"ref/$file2" ) 2>"ref/$errfile"
+	( export PATH="$pathvar"; <"in/$file1" $cmd1 | $cmd2 >"ref/$file2" ) 2>"ref/$errfile"
 	ref_retval=$?
 	sed -i "s;^$0: line [0-9]*;progname;" ref/$errfile
 	sed -i "s:ref/:out/:g" ref/$errfile
@@ -353,6 +353,48 @@ function TEST_invalid_cmd1 {
 	file1="empty.txt"
 	cmd1="./no/such/prog"
 	cmd2="./bin/tux.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_invalid_cmd2
+function TEST_invalid_cmd2 {
+	test_setup
+
+	file1="empty.txt"
+	cmd1="./bin/tux.sh b"
+	cmd2="./no/such/prog"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_empty_invalid_cmd2
+function TEST_path_empty_invalid_cmd2 {
+	test_setup
+
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="joker"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_empty_valid_cmd2
+function TEST_path_empty_valid_cmd2 {
+	test_setup
+
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="impostor.sh impostor"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior

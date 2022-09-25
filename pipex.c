@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/05/27 18:32:23 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/25 19:47:19 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/25 21:39:40 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,8 +40,50 @@ void	childs_info_update(t_childs_info *childs, pid_t child)
 	childs->last = child;
 }
 
-pid_t	execute_clean_up(int fd_in, int fd_out)
+char	**extract_path_arr_from_env(void)
 {
+	int	i;
+
+	i = 0;
+	while (environ[i] != NULL && ft_strncmp(environ[i], "PATH=", 5) != 0)
+		++i;
+	if (environ[i] == NULL)
+		return (ft_split("", ':'));
+	else
+		return (ft_split(environ[i] + 5, ':'));
+}
+
+char	*resolve_path(char *prog, char **path_arr)
+{
+	char	*full_path;
+	char	*candidate;
+
+	if (ft_strchr(prog, '/') != NULL || *path_arr == NULL)
+		return (ft_strdup(prog));
+	candidate = NULL;
+	full_path = NULL;
+	while (*path_arr != NULL)
+	{
+		free(full_path);
+		full_path = ft_pathjoin(*path_arr, prog);
+		if (access(full_path, F_OK) == 0)
+		{
+			free(candidate);
+			candidate = ft_strdup(full_path);
+			if (access(full_path, X_OK) == 0)
+				break ;
+		}
+		++path_arr;
+	}
+	free(full_path);
+	if (candidate == NULL)
+		ft_dprintf(2, "%s: %s\n", prog, "command not found");
+	return (candidate);
+}
+
+pid_t	execute_clean_up(char *cmd, int fd_in, int fd_out)
+{
+	free(cmd);
 	if (fd_in >= 0)
 		close(fd_in);
 	if (fd_out >= 0)
@@ -49,14 +91,14 @@ pid_t	execute_clean_up(int fd_in, int fd_out)
 	return (-1);
 }
 
-pid_t	execute_with_custom_io(char *my_name, char *cmd, int fd_in, int fd_out)
+pid_t	execute_with_io_fds(char *my_name, char *cmd, int fd_in, int fd_out)
 {
 	char	**args;
 	char	*prog;
 	pid_t	child;
 
-	if (fd_in < 0 || fd_out < 0)
-		return (execute_clean_up(fd_in, fd_out));
+	if (cmd == NULL || fd_in < 0 || fd_out < 0)
+		return (execute_clean_up(cmd, fd_in, fd_out));
 	args = ft_split(cmd, ' ');
 	prog = args[0];
 	child = fork();
@@ -69,6 +111,7 @@ pid_t	execute_with_custom_io(char *my_name, char *cmd, int fd_in, int fd_out)
 		exit(errno);
 	}
 	ft_freeparr((void **)args);
+	free(cmd);
 	close(fd_in);
 	close(fd_out);
 	return (child);
@@ -124,16 +167,21 @@ int	main(int argc, char **argv)
 	int				file_in;
 	int				file_out;
 	int				pipe_fds[2];
+	char			**path_arr;
 
 	(void) argc;
+	path_arr = extract_path_arr_from_env();
 	childs_info_init(&childs);
 	pipe(pipe_fds);
 	file_in = open_with_error_print(argv[0], argv[1], O_RDONLY);
 	file_out = open_with_error_print(
 			argv[0], argv[4], O_WRONLY | O_CREAT | O_TRUNC);
-	childs_info_update(
-		&childs, execute_with_custom_io(argv[0], argv[2], file_in, pipe_fds[1]));
-	childs_info_update(
-		&childs, execute_with_custom_io(argv[0], argv[3], pipe_fds[0], file_out));
+	childs_info_update(&childs,
+		execute_with_io_fds(argv[0], resolve_path(argv[2], path_arr),
+			file_in, pipe_fds[1]));
+	childs_info_update(&childs,
+		execute_with_io_fds(argv[0], resolve_path(argv[3], path_arr),
+			pipe_fds[0], file_out));
+	ft_freeparr((void **)path_arr);
 	return (wait_until_all_childs_exit(childs));
 }
