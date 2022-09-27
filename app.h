@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 11:47:42 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 13:01:25 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/27 16:57:53 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@ typedef struct s_app
 {
 	char		*name;
 	char		**path;
+	int			fds[4];
+	int			fds_end;
 	t_childs	childs;
 }	t_app;
 

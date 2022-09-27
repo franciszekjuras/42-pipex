@@ -1,7 +1,7 @@
 NAME = pipex
 
 FILES = \
-	pipex app app_utils childs
+	pipex app app_utils app_utils_fd childs exec_data
 
 OFILES = $(FILES:%=%.o)
 CFLAGS = -Wall -Wextra -Werror

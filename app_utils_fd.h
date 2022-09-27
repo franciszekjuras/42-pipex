@@ -1,26 +1,21 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   app_utils.h                                        :+:      :+:    :+:   */
+/*   app_utils_fd.h                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:21:08 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 18:23:16 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/27 17:16:24 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef APP_UTILS_H
-# define APP_UTILS_H
+#ifndef APP_UTILS_FD_H
+# define APP_UTILS_FD_H
 
-# include <sys/types.h>
-# include "exec_data.h"
 # include "app.h"
 
-char	**extract_path_arr_from_env(void);
-int		check_if_path_is_executable(char *path, char *prog, char **candidate);
-char	*resolve_prog_path(t_app *app, char *prog);
-pid_t	exec_clean_up(char **args, int fd_in, int fd_out);
-void	app_exec_child_side(t_app *app, t_exec_data *exec_data);
+void	app_track_fd(t_app *app, int fd);
+void	app_close_tracked_fds(t_app *app);
 
 #endif

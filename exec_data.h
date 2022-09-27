@@ -1,26 +1,30 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   app_utils.h                                        :+:      :+:    :+:   */
+/*   exec_data.h                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/09/27 12:21:08 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 18:23:16 by fjuras           ###   ########.fr       */
+/*   Created: 2022/09/27 18:04:13 by fjuras            #+#    #+#             */
+/*   Updated: 2022/09/27 18:15:25 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef APP_UTILS_H
-# define APP_UTILS_H
+#ifndef EXEC_DATA_H
+# define EXEC_DATA_H
 
 # include <sys/types.h>
-# include "exec_data.h"
 # include "app.h"
 
-char	**extract_path_arr_from_env(void);
-int		check_if_path_is_executable(char *path, char *prog, char **candidate);
-char	*resolve_prog_path(t_app *app, char *prog);
-pid_t	exec_clean_up(char **args, int fd_in, int fd_out);
-void	app_exec_child_side(t_app *app, t_exec_data *exec_data);
+typedef struct s_exec_data
+{
+	char	*prog_path;
+	char	**args;
+	int		fd_in;
+	int		fd_out;
+}	t_exec_data;
+
+void	exec_data_init(t_exec_data *exec_data, int fd_in, int fd_out);
+pid_t	exec_data_clean_up(t_exec_data *exec_data);
 
 #endif

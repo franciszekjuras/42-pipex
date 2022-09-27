@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 11:54:11 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 12:54:17 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/27 18:20:09 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,14 +18,15 @@
 #include <unistd.h>
 #include <libft/libft.h>
 #include "app_utils.h"
+#include "app_utils_fd.h"
+#include "exec_data.h"
 #include "app.h"
-
-extern char	**environ;
 
 void	app_init(t_app *app, char *name)
 {
 	app->name = ft_strdup(name);
 	app->path = extract_path_arr_from_env();
+	app->fds_end = 0;
 	childs_init(&app->childs);
 }
 
@@ -39,7 +40,11 @@ int	app_free(t_app *app)
 int	app_pipe(t_app *app, int pipe_fds[2])
 {
 	if (pipe(pipe_fds) == 0)
+	{
+		app_track_fd(app, pipe_fds[0]);
+		app_track_fd(app, pipe_fds[1]);
 		return (0);
+	}
 	else
 	{
 		ft_dprintf(2, "%s: %s\n", app->name, strerror(errno));
@@ -59,31 +64,25 @@ int	app_open(t_app *app, char *file, int flags)
 	{
 		ft_dprintf(2, "%s: %s: %s\n", app->name, file, strerror(errno));
 	}
+	app_track_fd(app, fd);
 	return (fd);
 }
 
 pid_t	app_exec(t_app *app, char *cmd, int fd_in, int fd_out)
 {
-	char	*prog_path;
-	char	**args;
-	pid_t	child;
+	t_exec_data	exec_data;
+	pid_t		child;
 
+	exec_data_init(&exec_data, fd_in, fd_out);
 	if (fd_in < 0 || fd_out < 0)
-		return (exec_clean_up(NULL, fd_in, fd_out));
-	args = ft_split(cmd, ' ');
-	prog_path = resolve_prog_path(app, args[0]);
-	if (prog_path == NULL)
-		return (exec_clean_up(args, fd_in, fd_out));
+		return (exec_data_clean_up(&exec_data));
+	exec_data.args = ft_split(cmd, ' ');
+	exec_data.prog_path = resolve_prog_path(app, exec_data.args[0]);
+	if (exec_data.prog_path == NULL)
+		return (exec_data_clean_up(&exec_data));
 	child = fork();
 	if (child == 0)
-	{
-		dup2(fd_in, STDIN_FILENO);
-		dup2(fd_out, STDOUT_FILENO);
-		execve(prog_path, args, environ);
-		ft_dprintf(2, "%s: %s: %s\n", app->name, args[0], strerror(errno));
-		exit(errno);
-	}
-	free(prog_path);
-	(void)(exec_clean_up(args, fd_in, fd_out));
+		app_exec_child_side(app, &exec_data);
+	(void)(exec_data_clean_up(&exec_data));
 	return (child);
 }

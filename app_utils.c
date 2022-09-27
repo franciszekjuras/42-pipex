@@ -6,15 +6,19 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:22:54 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 13:00:42 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/27 18:23:05 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include <unistd.h>
 #include <libft/libft.h>
 #include "app.h"
 #include "app_utils.h"
+#include "app_utils_fd.h"
+#include "exec_data.h"
 
 extern char	**environ;
 
@@ -71,13 +75,15 @@ char	*resolve_prog_path(t_app *app, char *prog)
 	return (candidate);
 }
 
-pid_t	exec_clean_up(char **args, int fd_in, int fd_out)
+void	app_exec_child_side(t_app *app, t_exec_data *exec_data)
 {
-	if (args != NULL)
-		ft_freeparr((void **)args);
-	if (fd_in >= 0)
-		close(fd_in);
-	if (fd_out >= 0)
-		close(fd_out);
-	return (-1);
+	dup2(exec_data->fd_in, STDIN_FILENO);
+	dup2(exec_data->fd_out, STDOUT_FILENO);
+	app_close_tracked_fds(app);
+	execve(exec_data->prog_path, exec_data->args, environ);
+	ft_dprintf(2, "%s: %s: %s\n", app->name,
+		exec_data->args[0], strerror(errno));
+	(void)(exec_data_clean_up(exec_data));
+	app_free(app);
+	exit(errno);
 }

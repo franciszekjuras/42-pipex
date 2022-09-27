@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:03:37 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 13:00:13 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/27 17:49:05 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,6 @@ int	childs_wait_until_all_exit(t_childs *childs)
 		++i;
 	}
 	if (childs->last < 0)
-		retval = errno;
+		retval = 127;
 	return (retval);
 }
