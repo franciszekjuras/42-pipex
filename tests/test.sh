@@ -374,7 +374,8 @@ function TEST_invalid_cmd2 {
 	print_summary
 }
 
-register TEST_path_empty_invalid_cmd2
+# See below v
+# register TEST_path_empty_invalid_cmd2
 function TEST_path_empty_invalid_cmd2 {
 	test_setup
 
@@ -388,13 +389,105 @@ function TEST_path_empty_invalid_cmd2 {
 	print_summary
 }
 
-register TEST_path_empty_valid_cmd2
-function TEST_path_empty_valid_cmd2 {
+# Bash has pretty bad behavior in this context,
+# it's probably better not to conform
+# register TEST_path_empty_cmd2_in_cwd
+function TEST_path_empty_cmd2_in_cwd {
 	test_setup
 
 	file1="empty.txt"
 	cmd1="./bin/tux.sh a"
 	cmd2="impostor.sh impostor"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_not_empty_cmd2_in_cwd
+function TEST_path_not_empty_cmd2_in_cwd {
+	test_setup
+
+	pathvar="./gibberish"
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="impostor.sh impostor"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_without_end_slash
+function TEST_path_without_end_slash {
+	test_setup
+
+	pathvar="./bin"
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="tux.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_with_end_slash
+function TEST_path_with_end_slash {
+	test_setup
+
+	pathvar="./bin/"
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="tux.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_with_garbage
+function TEST_path_with_garbage {
+	test_setup
+
+	pathvar="garbage:%:random/dir/:./bin:fdfdf"
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="tux.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_with_first_match_not_executable
+function TEST_path_with_first_match_not_executable {
+	test_setup
+
+	pathvar="garbage:%:./forbidden:random/dir/:./bin:fdfdf"
+	file1="empty.txt"
+	cmd1="./bin/tux.sh a"
+	cmd2="simple_perm.sh b"
+	file2=$DEFAULT_OUT
+	exec_pipex_and_bash
+	expect_pipex_eq_bash_behavior
+
+	print_summary
+}
+
+register TEST_path_ls
+function TEST_path_ls {
+	test_setup
+
+	pathvar="/bin"
+	file1="empty.txt"
+	cmd1="ls"
+	cmd2="ls gibberish"
 	file2=$DEFAULT_OUT
 	exec_pipex_and_bash
 	expect_pipex_eq_bash_behavior

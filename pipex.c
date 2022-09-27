@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/05/27 18:32:23 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/25 21:39:40 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/26 21:41:28 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,13 @@ void	childs_info_init(t_childs_info *childs)
 	childs->last = -1;
 }
 
+typedef struct s_app_ctx
+{
+	char			*name;
+	char			**path;
+	t_childs_info	childs;
+}	t_app_ctx;
+
 void	childs_info_update(t_childs_info *childs, pid_t child)
 {
 	if (child >= 0)
@@ -53,37 +60,50 @@ char	**extract_path_arr_from_env(void)
 		return (ft_split(environ[i] + 5, ':'));
 }
 
-char	*resolve_path(char *prog, char **path_arr)
+int	check_if_path_is_executable(char *path, char *prog, char **candidate)
 {
 	char	*full_path;
-	char	*candidate;
+	int		is_executable;
 
-	if (ft_strchr(prog, '/') != NULL || *path_arr == NULL)
-		return (ft_strdup(prog));
-	candidate = NULL;
-	full_path = NULL;
-	while (*path_arr != NULL)
+	is_executable = 0;
+	full_path = ft_pathjoin(path, prog);
+	if (access(full_path, F_OK) == 0)
 	{
-		free(full_path);
-		full_path = ft_pathjoin(*path_arr, prog);
-		if (access(full_path, F_OK) == 0)
-		{
-			free(candidate);
-			candidate = ft_strdup(full_path);
-			if (access(full_path, X_OK) == 0)
-				break ;
-		}
-		++path_arr;
+		free(*candidate);
+		*candidate = ft_strdup(full_path);
+		if (access(full_path, X_OK) == 0)
+			is_executable = 1;
 	}
 	free(full_path);
+	return (is_executable);
+}
+
+char	*resolve_prog_path(t_app_ctx *app_ctx, char *prog)
+{
+	char	*candidate;
+	char	**path;
+
+	if (prog == NULL)
+		return (NULL);
+	if (ft_strchr(prog, '/') != NULL)
+		return (ft_strdup(prog));
+	candidate = NULL;
+	path = app_ctx->path;
+	while (*path != NULL)
+	{
+		if (check_if_path_is_executable(*path, prog, &candidate))
+			break ;
+		++path;
+	}
 	if (candidate == NULL)
-		ft_dprintf(2, "%s: %s\n", prog, "command not found");
+		ft_dprintf(2, "%s: %s: %s\n", app_ctx->name, prog, "command not found");
 	return (candidate);
 }
 
-pid_t	execute_clean_up(char *cmd, int fd_in, int fd_out)
+pid_t	execute_clean_up(char **args, int fd_in, int fd_out)
 {
-	free(cmd);
+	if (args != NULL)
+		ft_freeparr((void **)args);
 	if (fd_in >= 0)
 		close(fd_in);
 	if (fd_out >= 0)
@@ -91,29 +111,29 @@ pid_t	execute_clean_up(char *cmd, int fd_in, int fd_out)
 	return (-1);
 }
 
-pid_t	execute_with_io_fds(char *my_name, char *cmd, int fd_in, int fd_out)
+pid_t	exec_with_io_fds(t_app_ctx *app_ctx, char *cmd, int fd_in, int fd_out)
 {
+	char	*prog_path;
 	char	**args;
-	char	*prog;
 	pid_t	child;
 
-	if (cmd == NULL || fd_in < 0 || fd_out < 0)
-		return (execute_clean_up(cmd, fd_in, fd_out));
+	if (fd_in < 0 || fd_out < 0)
+		return (execute_clean_up(NULL, fd_in, fd_out));
 	args = ft_split(cmd, ' ');
-	prog = args[0];
+	prog_path = resolve_prog_path(app_ctx, args[0]);
+	if (prog_path == NULL)
+		return (execute_clean_up(args, fd_in, fd_out));
 	child = fork();
 	if (child == 0)
 	{
 		dup2(fd_in, STDIN_FILENO);
 		dup2(fd_out, STDOUT_FILENO);
-		execve(prog, args, environ);
-		ft_dprintf(2, "%s: %s: %s\n", my_name, prog, strerror(errno));
+		execve(prog_path, args, environ);
+		ft_dprintf(2, "%s: %s: %s\n", app_ctx->name, args[0], strerror(errno));
 		exit(errno);
 	}
-	ft_freeparr((void **)args);
-	free(cmd);
-	close(fd_in);
-	close(fd_out);
+	free(prog_path);
+	(void)(execute_clean_up(args, fd_in, fd_out));
 	return (child);
 }
 
@@ -146,7 +166,7 @@ int	wait_until_all_childs_exit(t_childs_info childs)
 	return (retval);
 }
 
-int	open_with_error_print(char *my_name, char *file, int flags)
+int	open_with_error_print(t_app_ctx *app_ctx, char *file, int flags)
 {
 	int	fd;
 
@@ -156,32 +176,42 @@ int	open_with_error_print(char *my_name, char *file, int flags)
 		fd = open(file, flags, 0644);
 	if (fd < 0)
 	{
-		ft_dprintf(2, "%s: %s: %s\n", my_name, file, strerror(errno));
+		ft_dprintf(2, "%s: %s: %s\n", app_ctx->name, file, strerror(errno));
 	}
 	return (fd);
 }
 
+void	app_ctx_init(t_app_ctx *app_ctx, char *name)
+{
+	app_ctx->name = ft_strdup(name);
+	app_ctx->path = extract_path_arr_from_env();
+	childs_info_init(&app_ctx->childs);
+}
+
+void	app_ctx_free(t_app_ctx *app_ctx)
+{
+	free(app_ctx->name);
+	ft_freeparr((void **)app_ctx->path);
+}
+
 int	main(int argc, char **argv)
 {
-	t_childs_info	childs;
+	t_app_ctx		app_ctx;
 	int				file_in;
 	int				file_out;
 	int				pipe_fds[2];
-	char			**path_arr;
 
-	(void) argc;
-	path_arr = extract_path_arr_from_env();
-	childs_info_init(&childs);
+	if (argc != 5)
+		return (EINVAL);
+	app_ctx_init(&app_ctx, argv[0]);
 	pipe(pipe_fds);
-	file_in = open_with_error_print(argv[0], argv[1], O_RDONLY);
+	file_in = open_with_error_print(&app_ctx, argv[1], O_RDONLY);
 	file_out = open_with_error_print(
-			argv[0], argv[4], O_WRONLY | O_CREAT | O_TRUNC);
-	childs_info_update(&childs,
-		execute_with_io_fds(argv[0], resolve_path(argv[2], path_arr),
-			file_in, pipe_fds[1]));
-	childs_info_update(&childs,
-		execute_with_io_fds(argv[0], resolve_path(argv[3], path_arr),
-			pipe_fds[0], file_out));
-	ft_freeparr((void **)path_arr);
-	return (wait_until_all_childs_exit(childs));
+			&app_ctx, argv[4], O_WRONLY | O_CREAT | O_TRUNC);
+	childs_info_update(&app_ctx.childs,
+		exec_with_io_fds(&app_ctx, argv[2], file_in, pipe_fds[1]));
+	childs_info_update(&app_ctx.childs,
+		exec_with_io_fds(&app_ctx, argv[3], pipe_fds[0], file_out));
+	app_ctx_free(&app_ctx);
+	return (wait_until_all_childs_exit(app_ctx.childs));
 }
