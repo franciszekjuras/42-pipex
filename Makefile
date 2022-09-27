@@ -1,7 +1,7 @@
 NAME = pipex
 
 FILES = \
-	pipex
+	pipex app app_utils childs
 
 OFILES = $(FILES:%=%.o)
 CFLAGS = -Wall -Wextra -Werror
