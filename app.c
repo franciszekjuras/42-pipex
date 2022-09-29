@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 11:54:11 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 18:20:09 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/29 18:45:08 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,9 +17,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libft/libft.h>
-#include "app_utils.h"
-#include "app_utils_fd.h"
+#include "utils.h"
 #include "exec_data.h"
+#include "app_priv.h"
 #include "app.h"
 
 void	app_init(t_app *app, char *name)
@@ -77,7 +77,7 @@ pid_t	app_exec(t_app *app, char *cmd, int fd_in, int fd_out)
 	if (fd_in < 0 || fd_out < 0)
 		return (exec_data_clean_up(&exec_data));
 	exec_data.args = ft_split(cmd, ' ');
-	exec_data.prog_path = resolve_prog_path(app, exec_data.args[0]);
+	exec_data.prog_path = app_resolve_prog_path(app, exec_data.args[0]);
 	if (exec_data.prog_path == NULL)
 		return (exec_data_clean_up(&exec_data));
 	child = fork();

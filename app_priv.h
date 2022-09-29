@@ -1,30 +1,25 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   app_utils_fd.c                                     :+:      :+:    :+:   */
+/*   app_priv.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:21:08 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 17:36:25 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/29 18:40:34 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <unistd.h>
-#include "app.h"
+#ifndef APP_PRIV_H
+# define APP_PRIV_H
 
-void	app_track_fd(t_app *app, int fd)
-{
-	if (fd >= 0)
-		app->fds[app->fds_end++] = fd;
-}
+# include <sys/types.h>
+# include "exec_data.h"
+# include "app.h"
 
-void	app_close_tracked_fds(t_app *app)
-{
-	int	i;
+void	app_track_fd(t_app *app, int fd);
+void	app_close_tracked_fds(t_app *app);
+char	*app_resolve_prog_path(t_app *app, char *prog);
+void	app_exec_child_side(t_app *app, t_exec_data *exec_data);
 
-	i = 0;
-	while (i < app->fds_end)
-		close(app->fds[i++]);
-	app->fds_end = 0;
-}
+#endif

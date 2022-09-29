@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   app_utils.c                                        :+:      :+:    :+:   */
+/*   app_priv.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:22:54 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 18:23:05 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/29 18:47:11 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,45 +15,29 @@
 #include <string.h>
 #include <unistd.h>
 #include <libft/libft.h>
-#include "app.h"
-#include "app_utils.h"
-#include "app_utils_fd.h"
+#include "utils.h"
 #include "exec_data.h"
+#include "app.h"
 
 extern char	**environ;
 
-char	**extract_path_arr_from_env(void)
+void	app_track_fd(t_app *app, int fd)
+{
+	if (fd >= 0)
+		app->fds[app->fds_end++] = fd;
+}
+
+void	app_close_tracked_fds(t_app *app)
 {
 	int	i;
 
 	i = 0;
-	while (environ[i] != NULL && ft_strncmp(environ[i], "PATH=", 5) != 0)
-		++i;
-	if (environ[i] == NULL)
-		return (ft_split("", ':'));
-	else
-		return (ft_split(environ[i] + 5, ':'));
+	while (i < app->fds_end)
+		close(app->fds[i++]);
+	app->fds_end = 0;
 }
 
-int	check_if_path_is_executable(char *path, char *prog, char **candidate)
-{
-	char	*full_path;
-	int		is_executable;
-
-	is_executable = 0;
-	full_path = ft_pathjoin(path, prog);
-	if (access(full_path, F_OK) == 0)
-	{
-		free(*candidate);
-		*candidate = ft_strdup(full_path);
-		if (access(full_path, X_OK) == 0)
-			is_executable = 1;
-	}
-	free(full_path);
-	return (is_executable);
-}
-
-char	*resolve_prog_path(t_app *app, char *prog)
+char	*app_resolve_prog_path(t_app *app, char *prog)
 {
 	char	*candidate;
 	char	**path;

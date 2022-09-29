@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 18:04:13 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 18:15:25 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/29 18:24:09 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,6 @@
 # define EXEC_DATA_H
 
 # include <sys/types.h>
-# include "app.h"
 
 typedef struct s_exec_data
 {
