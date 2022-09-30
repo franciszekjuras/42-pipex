@@ -6,11 +6,10 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:03:37 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/27 17:49:05 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/30 12:26:55 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <errno.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>

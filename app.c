@@ -6,7 +6,7 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 11:54:11 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/29 18:45:08 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/30 12:26:21 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,10 +17,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libft/libft.h>
-#include "utils.h"
-#include "exec_data.h"
-#include "app_priv.h"
 #include "app.h"
+#include "app_priv.h"
+#include "exec_data.h"
+#include "utils.h"
 
 void	app_init(t_app *app, char *name)
 {

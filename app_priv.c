@@ -6,18 +6,18 @@
 /*   By: fjuras <fjuras@student.42wolfsburg.de>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/09/27 12:22:54 by fjuras            #+#    #+#             */
-/*   Updated: 2022/09/29 18:47:11 by fjuras           ###   ########.fr       */
+/*   Updated: 2022/09/30 12:25:56 by fjuras           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdlib.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <libft/libft.h>
-#include "utils.h"
-#include "exec_data.h"
 #include "app.h"
+#include "exec_data.h"
+#include "utils.h"
 
 extern char	**environ;
 
